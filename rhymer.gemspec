@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = %q{Find rhyme from text.}
   spec.description   = %q{Find rhyme from text.}
-  spec.homepage      = "https://github.com/suzuki86/rhymer"
+  spec.homepage      = "https://github.com/future731/rhymer"
   spec.license       = "MIT"
 
   # Prevent pushing this gem to RubyGems.org by setting 'allowed_push_host', or

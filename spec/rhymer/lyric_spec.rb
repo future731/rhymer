@@ -46,4 +46,21 @@ describe Rhymer::Lyric do
       end
     end
   end
+  describe '#words' do
+    let(:words) do
+      {
+        0 => an_instance_of(Natto::MeCabNode),
+        4 => an_instance_of(Natto::MeCabNode)
+      }
+    end
+
+    subject { lyric.words }
+    it { is_expected.to include words }
+
+    describe '#[0]' do
+      describe '#feature' do
+        subject { lyric.words[0].feature }
+      end
+    end
+  end
 end

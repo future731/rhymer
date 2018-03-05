@@ -1,141 +1,67 @@
 module Rhymer
   class Parser
     VIBES_THRESHOLD_DEFAULT = 4
-    PREFIX_LENGTH_DEFAULT = 4
+    PREFIX_LENGTH_DEFAULT = 1
 
-    attr_reader :lyric, :rhymes
+    attr_reader :lyric, :rhyme
 
     def initialize(text, config = { :vibes_threshold => VIBES_THRESHOLD_DEFAULT, :prefix_length => PREFIX_LENGTH_DEFAULT })
       text = remove_symbols(text)
       @lyric = Lyric.new(text)
-      @rhymes = []
+      @rhyme = []
       consonants = []
 
-      @lyric.nouns.each do |noun|
+      @lyric.words.each do |word|
         consonants << {
-          :position => noun[0],
-          :noun => romanize(noun[1].feature.split(",")[7])
+          :position => word[0],
+          :word => romanize(word[1].feature.split(",")[7])
         }
       end
 
-      rhymes = []
+      hit = Array.new(consonants.length).map{Array.new(consonants.length){false}}
       consonants.combination(2) do |arr|
-        score = vibes(arr.first[:noun], arr.last[:noun])
+        score = vibes(arr.first[:word], arr.last[:word])
         if
-          arr.first[:noun] != arr.last[:noun] &&
+          arr.first[:word] != arr.last[:word] &&
           score > config[:vibes_threshold]
         then
-          rhymes << {
-            :first => arr.first[:position],
-            :second => arr.last[:position],
-            :vibes => score,
-          }
+          hit[arr.first[:position]][arr.last[:position]] = true
         end
       end
 
-      rhymes.each do |rhyme|
-        prefixes = [[], []]
-
-        %w(first second).each_with_index do |label, n|
-          counter = 0
-          (rhyme[label.to_sym] - 1).step(0, -1) do |i|
-
-            parts_of_speech = @lyric.lyric[i].feature.split(",")[0]
-            kind_of_parts_of_speech = @lyric.lyric[i].feature.split(",")[1]
-            previous_parts_of_speech = @lyric.lyric[i - 1].feature.split(",")[0]
-            further_previous_parts_of_speech = @lyric.lyric[i - 2].feature.split(",")[0]
-
-            if prefixes[n].length > 0
-              latest_stored_parts_of_speech = prefixes[n][0][:term].feature.split(",")[0]
+      cand_length = 0
+      first_pos = 0
+      last_pos = 0
+      for i in 0..consonants.length
+        for j in i+1..consonants.length
+          if hit[i][j]
+            unless
+                @lyric.lyric[i].feature.split(",")[0] == @lyric.lyric[j].feature.split(",")[0]
+              next
             end
-
-            if n > 1 && i <= rhyme[:first]
-              break
+            counter = 0
+            while i - counter - 1 >= 0 and j - counter - 1 >= 0
+              if hit[i-counter-1][j-counter- 1]
+                counter += 1
+              else
+                break
+              end
             end
-
-            if
-              counter > config[:prefix_length] &&
-              latest_stored_parts_of_speech != "助動詞" &&
-              latest_stored_parts_of_speech != "助詞" &&
-              latest_stored_parts_of_speech != "動詞" &&
-              previous_parts_of_speech != "名詞" &&
-              previous_parts_of_speech != "連体詞" &&
-              parts_of_speech != "名詞" &&
-              parts_of_speech != "連体詞"
-            then
-              break
+            if counter > cand_length
+              cand_length = counter
+              first_pos = i
+              last_pos = j
             end
-
-            if
-              kind_of_parts_of_speech == "句点" ||
-              kind_of_parts_of_speech == "読点"
-            then
-              break
-            end
-
-            if
-              parts_of_speech == "名詞" ||
-              parts_of_speech == "接頭詞" ||
-              parts_of_speech == "動詞" ||
-              parts_of_speech == "接続詞" ||
-              parts_of_speech == "形容詞" ||
-              parts_of_speech == "連体詞"
-            then
-              prefixes[n].unshift({
-                :position => i,
-                :term => @lyric.lyric[i]
-              })
-            end
-
-            if
-              (
-                parts_of_speech == "助詞" &&
-                previous_parts_of_speech != "記号"
-              ) ||
-              (
-                parts_of_speech == "助動詞" &&
-                previous_parts_of_speech != "記号"
-              )
-            then
-              prefixes[n].unshift({
-                :position => i,
-                :term => @lyric.lyric[i]
-              })
-            end
-
-            if 
-              previous_parts_of_speech != "名詞" &&
-              previous_parts_of_speech != "動詞" &&
-              previous_parts_of_speech != "連体詞" &&
-              further_previous_parts_of_speech == "記号"
-            then
-              break
-            end
-
-            counter = counter + 1
-          end
-
-        end
-
-        prefix_surfaces = ["", ""]
-        prefixes.each_with_index do |prefix, i|
-          prefix.each do |p|
-            prefix_surfaces[i] = prefix_surfaces[i] + p[:term].surface
           end
         end
+      end
 
-        if prefix_surfaces[0].empty? || prefix_surfaces[1].empty?
-          next
-        end
-
-        @rhymes << [
-          prefix_surfaces[0] + @lyric.lyric[rhyme[:first]].surface,
-          prefix_surfaces[1] + @lyric.lyric[rhyme[:second]].surface,
-          rhyme[:vibes]
+      if cand_length > config[:prefix_length]
+        @rhyme = [
+            @lyric.lyric[first_pos-cand_length..first_pos].map{|elem| elem.feature.split(",")[6]}.join,
+            @lyric.lyric[last_pos-cand_length..last_pos].map{|elem| elem.feature.split(",")[6]}.join,
         ]
       end
-
-      @rhymes = @rhymes.sort_by {|a, b, c| c }.reverse
     end
 
     def remove_html(text)
@@ -272,7 +198,6 @@ module Rhymer
 
       a = replace_consonant(a)
       b = replace_consonant(b)
-
       if extract_vowel(a).length < 3 || extract_vowel(b).length < 3
         return 0
       end

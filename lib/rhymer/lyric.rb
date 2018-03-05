@@ -22,5 +22,14 @@ module Rhymer
       end
       nouns
     end
+    def words
+      words = {}
+      lyric.each_with_index do |term, index|
+        if term.feature.split(",")[0] != "記号"
+          words.store(index, term)
+        end
+      end
+      words
+    end
   end
 end
