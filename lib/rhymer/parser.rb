@@ -56,7 +56,7 @@ module Rhymer
         end
       end
 
-      if cand_length > config[:prefix_length]
+      if cand_length >= config[:prefix_length]
         @rhyme = [
             @lyric.lyric[first_pos-cand_length..first_pos].map{|elem| elem.feature.split(",")[6]}.join,
             @lyric.lyric[last_pos-cand_length..last_pos].map{|elem| elem.feature.split(",")[6]}.join,

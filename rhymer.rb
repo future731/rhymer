@@ -2,7 +2,7 @@
 require 'rhymer'
 
 def rhymer(line)
-  rhymer = Rhymer::Parser.new(line + '\n', { :vibes_threshold => 0, :prefix_length => 0})
+  rhymer = Rhymer::Parser.new(line + '\n', { :vibes_threshold => 10, :prefix_length => 2})
   has_rhyme = false
   rhymer_strings = ""
   # 1つだけリプライ
